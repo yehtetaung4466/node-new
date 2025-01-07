@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1
+
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Dockerfile reference guide at
+# https://docs.docker.com/go/dockerfile-reference/
+
+# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
+
+ARG NODE_VERSION=22.6.0
+
+################################################################################
+# Use node image for base image for all stages.
+FROM node:${NODE_VERSION}-alpine AS base
+
+# Set working directory for all build stages.
+WORKDIR /usr/src/app
+
+# Install npm (usually already included in node images, but you can specify the version if needed).
+RUN npm install -g npm
+
+################################################################################
+# Create a stage for installing production dependencies.
+FROM base AS deps
+
+# Download dependencies AS a separate step to take advantage of Docker's caching.
+# Leverage a cache mount to /root/.npm to speed up subsequent builds.
+# Leverage bind mounts to package.json and package-lock.json to avoid having to copy them
+# into this layer.
+RUN --mount=type=bind,source=package.json,target=package.json \
+    --mount=type=bind,source=package-lock.json,target=package-lock.json \
+    --mount=type=cache,target=/root/.npm \
+    npm ci --production --frozen-lockfile
+
+################################################################################
+# Create a stage for building the application.
+FROM deps AS build
+
+# Download additional development dependencies before building, AS some projects require
+# "devDependencies" to be installed to build. If you don't need this, remove this step.
+RUN --mount=type=bind,source=package.json,target=package.json \
+    --mount=type=bind,source=package-lock.json,target=package-lock.json \
+    --mount=type=cache,target=/root/.npm \
+    npm ci --frozen-lockfile
+
+# Copy the rest of the source files into the image.
+COPY . .
+
+# Run the build script.
+# RUN npm run build
+
+# Expose the port that the application listens on.
+# EXPOSE 8000
+
+# Run the application.
+CMD npm run schema:generate && npm run migrate

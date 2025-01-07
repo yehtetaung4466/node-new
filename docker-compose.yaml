@@ -1,0 +1,77 @@
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: ./containers/server/Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/usr/src/app/src  # Mount the source code for hot-reloading
+      - /usr/src/app/node_modules  # Ensure node_modules are not overwritten
+    env_file:
+      - .env
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+  migration:
+    build:
+      context: .
+      dockerfile: ./containers/migrator/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"  # Don't restart the migrator after it completes
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_volume:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:latest
+    restart: always
+    user: postgres
+    container_name: postgres
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+    environment:
+      # POSTGRES_USER: yehtetaung
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: connect_db
+    ports:
+      - "5432:5432" # Expose PostgreSQL on the default port
+    volumes:
+      - pg_volume:/var/lib/postgresql/data # Persist data
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+    ports:
+      - "9000:9000"  # Expose MinIO API (Object Storage) on port 9000
+      - "4300:4300"  # Expose MinIO Console (Web UI) on port 4300
+    volumes:
+      - minio_volume:/data
+    command: server /data --console-address ":4300"
+    restart: always
+
+volumes:
+  pg_volume:
+  pgadmin_volume:
+  minio_volume:  # Persist data for MinIO
