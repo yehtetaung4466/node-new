@@ -48,8 +48,5 @@ COPY . .
 # Run the build script.
 # RUN npm run build
 
-# Expose the port that the application listens on.
-# EXPOSE 8000
 
-# Run the application.
-CMD npm run schema:generate && npm run migrate
+CMD npm run migrate

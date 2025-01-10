@@ -7,7 +7,7 @@ export default <T>(data:any,schema:ZodSchema<T>) =>{
     if(parsed.success){
         return parsed.data
     }else {
-        const error = parsed.error.errors.map((issue)=>{
+        const error = parsed.error.issues.map((issue)=>{
             return issue.message
         })
         throw new HttpException(StatusCodes.BAD_REQUEST,error)

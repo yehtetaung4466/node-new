@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import MultipartFile from "@shared/classes/multipartfile";
 import { config } from "dotenv";
 config()
 
@@ -21,14 +22,14 @@ const s3Client = new S3Client({
 export const BUCKET_NAME = process.env.S3_BUCKET_NAME || "my-bucket"; // Replace with your S3 bucket name
 
 // Upload a file to S3
-async function upload(file:any) {
-  const imageBuffer = Buffer.from(file.content, "base64"); // Convert base64 image to buffer
+async function upload(file:MultipartFile) {
+  const imageBuffer = Buffer.from(file.buffer); // Convert base64 image to buffer
 
   const s3Params = {
     Bucket: BUCKET_NAME,
-    Key: `product-images/${Date.now()}-${file.filename}`, // Unique image name
+    Key: `product-images/${Date.now()}-${file.originalname}`, // Unique image name
     Body: imageBuffer,
-    ContentType: file.contentType, // Set the appropriate content type
+    ContentType: file.mimetype, // Set the appropriate content type
   };
 
   const command = new PutObjectCommand(s3Params);
@@ -61,7 +62,7 @@ async function download(key:string) {
 }
 
 // Generate a presigned URL for a file
-async function getSignedUrlSync(key:string) {
+async function getSignedUrlAsync(key:string) {
   const presignedUrlParams = {
     Bucket: BUCKET_NAME,
     Key: key,
@@ -102,6 +103,6 @@ async function remove(key:string) {
 export default {
   upload,
   download,
-  getSignedUrlSync,
+  getSignedUrlAsync,
   remove,
 };
